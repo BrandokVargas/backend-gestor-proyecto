@@ -11,6 +11,8 @@ const registroUsuario = async (req,res)=>{
     const {email} = req.body;
     //Evitar registros dupicados
     const usuarioYaRegistrado = await Usuario.findOne({email});
+
+    
     if(usuarioYaRegistrado){
         const error = new Error("Este correo ya está en uso");
         return res.status(400).json({msg: error.message});
@@ -58,6 +60,7 @@ const logueoUsuario = async (req,res) => {
             email: usuario.email,
             token: generarJWT(usuario._id)
         })
+    
     }else{
         const error = new Error("Password incorrecto");
         return res.status(404).json({msg: error.message}); 
@@ -153,10 +156,8 @@ const nuevoPassword = async (req, res) => {
 }
 
 const perfil = async (req,res)=> {
-
     const {usuario} = req;
-    res.json({usuario});
-
+    res.json(usuario);
 }
 
 

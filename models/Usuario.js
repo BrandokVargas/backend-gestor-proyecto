@@ -7,7 +7,6 @@ const usuarioModel = mongoose.Schema({
         required: true,
         trim: true,
     },
-
     password: {
         type: String,
         required: true,
@@ -19,7 +18,6 @@ const usuarioModel = mongoose.Schema({
         trim: true,
         unique: true, 
     },
-
     token: {
         type: String,
     },
@@ -27,6 +25,10 @@ const usuarioModel = mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    vip: {
+        type: Boolean,
+        default: false,
+    }
 },{
     timestamps: true,
 });
@@ -41,14 +43,15 @@ usuarioModel.pre('save',async function(next){
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password,salt);
 })
-
+ 
 
 //Comprobar password
 usuarioModel.methods.verificarPassword = async function(passwordFormulario){
     //Verifica un string  que no esta hasheado por uno que si está.
     return await bcrypt.compare(passwordFormulario,this.password)
-
 }
+
+
 
 const Usuario = mongoose.model("Usuario",usuarioModel);
 export default Usuario;

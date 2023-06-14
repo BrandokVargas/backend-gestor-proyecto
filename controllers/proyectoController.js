@@ -1,15 +1,13 @@
 import Proyecto from "../models/Proyecto.js";
-import Tarea from "../models/Tarea.js";
 import Usuario from "../models/Usuario.js";
 
 const obtenerProyectos = async (req, res) => {
-  const proyectos = await Proyecto.find()
-                  .where('creador').equals(req.usuario);
-  //   $or: [
-  //     { colaboradores: { $in: req.usuario } },
-  //     { creador: { $in: req.usuario } },
-  //   ],
-  // }).select("-tareas");
+  const proyectos = await Proyecto.find({
+    '$or': [
+      {'colaboradores': {$in: req.usuario}},
+      {'creador': {$in: req.usuario}},
+    ]
+  }).select('-tareas');
   res.json(proyectos);
 };
 
@@ -29,24 +27,21 @@ const obtenerProyecto = async (req, res) => {
   const { id } = req.params;
 
   const proyecto = await Proyecto.findById(id)
+  .populate({path: "tareas",populate: {path: "completado",select: "nombre"}})
+  .populate("colaboradores","nombre email");
    
-
   //verificar que el proyecto no se ha encontrado
   if (!proyecto) {
     const error = new Error("Proyecto no encontrado");
     return res.status(404).json({ msg: error.message });
   }
 
-  if (proyecto.creador.toString() !== req.usuario._id.toString()){
+  if (proyecto.creador.toString() !== req.usuario._id.toString() && !proyecto.colaboradores.some(colaborador => colaborador._id.toString() === req.usuario._id.toString())) {
     const error = new Error("Acción No Válida");
     return res.status(401).json({ msg: error.message });
   }
 
-  //Obtener tareas del proyecto.
-  const tares = await Tarea.find().where("proyecto").equals(proyecto._id);
-
-  const respuesta = [...proyectos,...tareas];
-  res.json(respuesta);
+  res.json(proyecto);
 };
 
 const editarProyecto = async (req, res) => {
@@ -118,7 +113,8 @@ const buscarColaborador = async (req, res) => {
   res.json(usuario);
 };
 
-const agregarColaborador = async (req, res) => {
+const agregarColaborador = async (req, res) => { 
+
   const proyecto = await Proyecto.findById(req.params.id);
 
   if (!proyecto) {
@@ -127,7 +123,7 @@ const agregarColaborador = async (req, res) => {
   }
 
   if (proyecto.creador.toString() !== req.usuario._id.toString()) {
-    const error = new Error("Acción no válida");
+    const error = new Error("No tienes permisos para hacer esto");
     return res.status(404).json({ msg: error.message });
   }
 
@@ -141,22 +137,30 @@ const agregarColaborador = async (req, res) => {
     return res.status(404).json({ msg: error.message });
   }
 
-  // El colaborador no es el admin del proyecto
+  // El creador del proyecto no puede agregar asi mismo.
   if (proyecto.creador.toString() === usuario._id.toString()) {
-    const error = new Error("El Creador del Proyecto no puede ser colaborador");
+    const error = new Error("Ups! tú no puedes agregarte a este proyecto");
     return res.status(404).json({ msg: error.message });
   }
 
-  // Revisar que no este ya agregado al proyecto
-  if (proyecto.colaboradores.includes(usuario._id)) {
-    const error = new Error("El Usuario ya pertenece al Proyecto");
-    return res.status(404).json({ msg: error.message });
+
+  // Verificar que el colaborador no pertenece al proyecto
+  if (proyecto.colaboradores.includes(usuario._id)) { 
+    const error = new Error("Este usuario ya está como colaborador");
+    return res.status(404).json({ msg: error.message });  
   }
 
-  // Esta bien, se puede agregar
-  proyecto.colaboradores.push(usuario._id);
-  await proyecto.save();
-  res.json({ msg: "Colaborador Agregado Correctamente" });
+  if(proyecto.colaboradores.length >= 1 && usuario.vip === false){
+    const error = new Error("Accede a nuestro plan premium para poder agregar mas colaboradores");
+    return res.status(404).json({ msg: error.message });
+    
+  }else{
+    // Todo good se puede agregar.
+    proyecto.colaboradores.push(usuario._id);  
+    await proyecto.save();
+    res.json({ msg: "Colaborador Agregado Correctamente" });
+  } 
+
 };
 
 const eliminarColaborador = async (req, res) => {
@@ -168,11 +172,11 @@ const eliminarColaborador = async (req, res) => {
   }
 
   if (proyecto.creador.toString() !== req.usuario._id.toString()) {
-    const error = new Error("Acción no válida");
+    const error = new Error("No tienes permisos para hacer esto");
     return res.status(404).json({ msg: error.message });
   }
 
-  // Esta bien, se puede eliminar
+  // Godines se puede eliminar
   proyecto.colaboradores.pull(req.body.id);
   await proyecto.save();
   res.json({ msg: "Colaborador Eliminado Correctamente" });
