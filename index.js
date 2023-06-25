@@ -5,6 +5,7 @@ import cors from "cors";
 import usuarioRoutes from "./routes/usuarioRoutes.js";
 import proyectoRoutes from "./routes/proyectoRoutes.js";
 import tareaRoutes from "./routes/tareaRoutes.js";
+
 import mongoose from "mongoose";
 
 
@@ -13,7 +14,6 @@ app.use(express.json());
 
 
 dotenv.config();
-
 mongoose.set('strictQuery',true)
 
 
